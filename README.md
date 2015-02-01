@@ -7,7 +7,7 @@ http://www.startech.com/Cards-Adapters/USB-3.0/Cards/1-Port-Flush-Mount-ExpressC
 
 A rewrite is ongoing, to cleanup code by only targeting Yosemite for now and Renesas chipset functionality used in the startech express card.
 
-An custom installer will also be added as described in Apple's documentation : https://developer.apple.com/library/mac/documentation/Darwin/Conceptual/KEXTConcept/KEXTConceptPackaging/packaging_tutorial.html
+A custom installer will also be added as described in Apple's documentation : https://developer.apple.com/library/mac/documentation/Darwin/Conceptual/KEXTConcept/KEXTConceptPackaging/packaging_tutorial.html
 
 ### How to Install (until an installer is provided) :
 
