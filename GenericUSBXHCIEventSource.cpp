@@ -67,7 +67,7 @@ void GenericUSBXHCI::ScheduleEventSource(void)
 {
 	if (!_eventSource)
 		return;
-#if 1
+    
 	/*
 	 * Note: This optimization depends on implementation of IOWorkLoop.
 	 *   If we're executing inside InterruptHandler(), since _eventSource
@@ -76,6 +76,6 @@ void GenericUSBXHCI::ScheduleEventSource(void)
 	 */
 	if (_workLoop && _workLoop->onThread())
 		return;
-#endif
+    
 	_eventSource->enable();	// Note: twisted way of calling signalWorkAvailable()
 }

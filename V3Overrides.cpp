@@ -9,8 +9,7 @@
 #include "GenericUSBXHCI.h"
 #include "XHCITypes.h"
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 #pragma mark -
 #pragma mark IOUSBControllerV3 Overrides
@@ -336,13 +335,7 @@ IOReturn CLASS::GetRootHubPortErrorCount(UInt16 port, UInt16* count)
 	uint32_t portLi = Read32Reg(&_pXHCIOperationalRegisters->prs[_port].PortLi);
 	if (m_invalid_regspace)
 		return kIOReturnNoDevice;
-#if 0
-	/*
-	 * TBD: ???
-	 */
-	if (_errataBits & kErrataIntelLynxPoint)
-		portLi >>= 16;
-#endif
+
 	*count = static_cast<uint16_t>(portLi);
 	return kIOReturnSuccess;
 }

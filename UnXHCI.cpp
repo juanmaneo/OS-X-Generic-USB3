@@ -9,8 +9,7 @@
 #include "GenericUSBXHCI.h"
 #include <IOKit/usb/IOUSBRootHubDevice.h>
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 #pragma mark -
 #pragma mark Stuff Extraneous to the xHC Specification
@@ -91,32 +90,6 @@ done:
 	return _muxedPortsExist;
 }
 
-#if 0
-/*
- * TBD: Does this really work?
- *   It's not documented anywhere
- */
-__attribute__((noinline, visibility("hidden")))
-void CLASS::DisableComplianceMode(void)
-{
-	if ((_vendorID == kVendorFrescoLogic || _vendorID == kVendorIntel) &&
-		!(_errataBits & kErrataEnableAutoCompliance)) {
-		_pXHCIPPTChickenBits = reinterpret_cast<uint32_t volatile*>(reinterpret_cast<uint8_t volatile*>(_pXHCICapRegisters) + 0x80EC);
-		*_pXHCIPPTChickenBits |= 1U;
-	}
-}
-
-__attribute__((noinline, visibility("hidden")))
-void CLASS::EnableComplianceMode(void)
-{
-	if ((_vendorID == kVendorFrescoLogic || _vendorID == kVendorIntel) &&
-		!(_errataBits & kErrataEnableAutoCompliance)) {
-		_pXHCIPPTChickenBits = reinterpret_cast<uint32_t volatile*>(reinterpret_cast<uint8_t volatile*>(_pXHCICapRegisters) + 0x80EC);
-		*_pXHCIPPTChickenBits &= ~1U;
-	}
-}
-#endif
-
 __attribute__((visibility("hidden")))
 IOReturn CLASS::FL1100Tricks(int choice)
 {
@@ -172,30 +145,6 @@ uint32_t CLASS::VMwarePortStatusShuffle(uint32_t statusChangedBitmap, uint8_t nu
 	}
 	return (statusChangedBitmap & 1U) | outss | (ouths << numPortsEach);
 }
-
-#if 0
-__attribute__((visibility("hidden")))
-uint32_t CLASS::CheckACPITablesForCaptiveRootHubPorts(uint8_t numPorts)
-{
-	IOReturn rc;
-	uint32_t v;
-	uint8_t connectorType;
-
-	if (!numPorts)
-		return 0U;
-	v = 0U;
-	for (uint8_t port = 1U; port <= numPorts; ++port) {
-		connectorType = 254U;
-		/*
-		 * IOReturn IOUSBControllerV3::GetConnectorType(IORegistryEntry* provider, UInt32 portNumber, UInt32 locationID, UInt8* connectorType);
-		 */
-		rc = GetConnectorType(_device, port, _expansionData->_locationID, &connectorType);
-		if (rc == kIOReturnSuccess && connectorType == kUSBProprietaryConnector)
-			v |= 1U << port;
-	}
-	return v;
-}
-#endif
 
 __attribute__((visibility("hidden")))
 IOReturn CLASS::HCSelect(uint8_t port, uint8_t controllerType)

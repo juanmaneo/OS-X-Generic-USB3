@@ -11,8 +11,9 @@
 #define GenericUSBXHCI_Completer_h
 
 #include <IOKit/usb/USB.h>
+#include "Config.h"
 
-class GenericUSBXHCI;
+class CLASS;
 
 class Completer
 {
@@ -25,7 +26,7 @@ private:
 		CompleterItem* next;
 	};
 
-	GenericUSBXHCI* owner;
+	CLASS* owner;
 	CompleterItem* activeHead;
 	CompleterItem* activeTail;
 	CompleterItem* freeHead;
@@ -37,7 +38,7 @@ private:
 
 public:
 	__attribute__((always_inline))
-	void setOwner(GenericUSBXHCI* owner) { this->owner = owner; }
+	void setOwner(CLASS* owner) { this->owner = owner; }
 	bool AddItem(IOUSBCompletion const*, IOReturn, uint32_t, bool);
 	__attribute__((always_inline))
 	void Flush(void) { if (activeHead && !flushing) InternalFlush(); }

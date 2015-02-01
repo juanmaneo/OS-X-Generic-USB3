@@ -11,8 +11,7 @@
 #include "Async.h"
 #include "XHCITypes.h"
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 #pragma mark -
 #pragma mark Control Endpoints/Slots
@@ -70,22 +69,10 @@ IOReturn CLASS::AddressDevice(uint32_t deviceSlot, uint16_t maxPacketSize, bool 
 	pContext = GetInputContextPtr(1);
 	pContext->_s.dwSctx1 |= XHCI_SCTX_1_RH_PORT_SET(static_cast<uint32_t>(currentPortOnHub));
 	pContext->_s.dwSctx0 = XHCI_SCTX_0_CTX_NUM_SET(1U);
-#if 0
-	uint32_t portSpeed = Read32Reg(&_pXHCIOperationalRegisters->prs[currentPortOnHub - 1U].PortSC);
-	if (m_invalid_regspace)
-		return kIOReturnNoDevice;
-	portSpeed = XHCI_PS_SPEED_GET(portSpeed);
-	if (portSpeed >= XDEV_SS) {
-		SetSlCtxSpeed(pContext, portSpeed);
-		maxPacketSize = 512U;
-		goto skip_low_full;
-	}
-#else
 	if ((currentHubAddress == _hub3Address) &&
 		(speed < kUSBDeviceSpeedSuper || maxPacketSize != 512U))
 		IOLog("%s: Inconsistent device speed %u (maxPacketSize %u) for topology rooted in SuperSpeed hub\n",
 			  __FUNCTION__, speed, maxPacketSize);
-#endif
 	switch (speed) {
 		case kUSBDeviceSpeedLow:
 			SetSlCtxSpeed(pContext, XDEV_LS);
@@ -113,6 +100,7 @@ IOReturn CLASS::AddressDevice(uint32_t deviceSlot, uint16_t maxPacketSize, bool 
 		else
 			pContext->_s.dwSctx0 &= ~XHCI_SCTX_0_MTT_SET(1U);
 	}
+// TODO: make this a function an remove goto ...
 skip_low_full:
 #if kMaxActiveInterrupters > 1
 	pContext->_s.dwSctx2 |= XHCI_SCTX_2_IRQ_TARGET_SET(1U);
@@ -138,13 +126,6 @@ skip_low_full:
 		return kIOReturnInternalError;
 	else if (retFromCMD > -1000)
 		return kIOReturnSuccess;
-	else if (retFromCMD == -1000 - XHCI_TRB_ERROR_PARAMETER) {
-#if 0
-		PrintContext(GetInputContextPtr());
-		PrintContext(GetInputContextPtr(1));
-		PrintContext(GetInputContextPtr(2));
-#endif
-	}
 	return TranslateXHCIStatus(-1000 - retFromCMD, deviceSlot, false);
 }
 
@@ -167,21 +148,8 @@ void CLASS::NukeSlot(uint8_t slot)
 				if (pRing[streamId].isochEndpoint)
 					NukeIsochEP(pRing[streamId].isochEndpoint);
 			} else {
-#if 1
 				if (pRing[streamId].asyncEndpoint)
 					pRing[streamId].asyncEndpoint->nuke();
-#else
-				/*
-				 * TBD: This is now safe, as Abort() no longer
-				 *   calls SetTRDQPtr, however this code will carry
-				 *   out the completions from aborted transactions.
-				 *   Want that?
-				 */
-				if (pRing[streamId].asyncEndpoint) {
-					pRing[streamId].asyncEndpoint->Abort();
-					pRing[streamId].asyncEndpoint->release();
-				}
-#endif
 			}
 		}
 		DeallocRing(pRing);
@@ -205,26 +173,26 @@ int32_t CLASS::CleanupControlEndpoint(uint8_t slot, bool justDisable)
 	SlotStruct* pSlot;
 	ringStruct* pRing;
 
-	if (justDisable)
-		goto do_disable;
-	pSlot = SlotPtr(slot);
-	pRing = pSlot->ringArrayForEndpoint[1];
-	if (pRing) {
-		DeallocRing(pRing);
-		IOFree(pRing, sizeof *pRing);
-		pSlot->ringArrayForEndpoint[1] = 0;
-	}
-	if (pSlot->md) {
-		pSlot->md->complete();
-		pSlot->md->release();
-		pSlot->md = 0;
-		pSlot->ctx = 0;
-		pSlot->physAddr = 0U;
-	}
-	_addressMapper.Slot[0] = 0U;
-	_addressMapper.Active[0] = false;
-
-do_disable:
+    if (!justDisable) {
+        // some cleanup before disable
+        pSlot = SlotPtr(slot);
+        pRing = pSlot->ringArrayForEndpoint[1];
+        if (pRing) {
+            DeallocRing(pRing);
+            IOFree(pRing, sizeof *pRing);
+            pSlot->ringArrayForEndpoint[1] = 0;
+        }
+        if (pSlot->md) {
+            pSlot->md->complete();
+            pSlot->md->release();
+            pSlot->md = 0;
+            pSlot->ctx = 0;
+            pSlot->physAddr = 0U;
+        }
+        _addressMapper.Slot[0] = 0U;
+        _addressMapper.Active[0] = false;
+    }
+    // do disable here
 	localTrb.d = XHCI_TRB_3_SLOT_SET(static_cast<uint32_t>(slot));
 	return WaitForCMD(&localTrb, XHCI_TRB_TYPE_DISABLE_SLOT, 0);
 }
@@ -321,12 +289,7 @@ IOReturn CLASS::configureHub(uint32_t deviceAddress, uint32_t flags)
 		return kIOReturnInternalError;
 	if (retFromCMD > -1000)
 		return kIOReturnSuccess;
-	if (retFromCMD == -1000 - XHCI_TRB_ERROR_PARAMETER) {
-#if 0
-		PrintContext(GetInputContextPtr());
-		PrintContext(pContext);
-#endif
-	}
+
 	return kIOReturnInternalError;
 }
 

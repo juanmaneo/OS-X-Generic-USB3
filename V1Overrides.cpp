@@ -13,8 +13,7 @@
 #include <IOKit/IOTimerEventSource.h>
 #include <libkern/version.h>
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 #pragma mark -
 #pragma mark IOUSBController Overrides
@@ -69,11 +68,6 @@ void CLASS::UIMCheckForTimeouts(void)
 	frameNumber = GetFrameNumber32();
 	sts = Read32Reg(&_pXHCIOperationalRegisters->USBSts);
 	if (m_invalid_regspace) {
-#if 0
-		for (slot = 1U; slot <= _numSlots; ++slot)
-			if (!ConstSlotPtr(slot)->isInactive())
-				CheckSlotForTimeouts(slot, 0U, true);
-#endif
 		if (_expansionData) {
 			_watchdogTimerActive = false;
 			if (_watchdogUSBTimer)
@@ -85,15 +79,6 @@ void CLASS::UIMCheckForTimeouts(void)
 		IOLog("%s: HSE bit set:%x (1)\n", __FUNCTION__, sts);
 		_HSEDetected = true;
 	}
-#if 0
-	for (slot = 1U; slot <= _numSlots; ++slot) {
-		SlotStruct* pSlot = SlotPtr(slot);
-		if (pSlot->isInactive())
-			continue;
-		if (!(pSlot->oneBitCache = IsStillConnectedAndEnabled(slot)))
-			CheckSlotForTimeouts(slot, frameNumber, true);
-	}
-#endif
 	if (_powerStateChangingTo != kUSBPowerStateStable && _powerStateChangingTo < kUSBPowerStateOn && _powerStateChangingTo > kUSBPowerStateRestart)
 		return;
 	mfIndex = Read32Reg(&_pXHCIRuntimeRegisters->MFIndex);
@@ -106,15 +91,16 @@ void CLASS::UIMCheckForTimeouts(void)
 		SlotStruct const* pSlot = ConstSlotPtr(slot);
 		if (pSlot->isInactive())
 			continue;
-#if 0
-		if (pSlot->oneBitCache)
-#endif
-			CheckSlotForTimeouts(slot, frameNumber, pSlot->deviceNeedsReset);
+        CheckSlotForTimeouts(slot, frameNumber, pSlot->deviceNeedsReset);
 	}
 }
 
-IOReturn CLASS::UIMCreateControlTransfer(short functionNumber, short endpointNumber, IOUSBCommand* command,
-										 IOMemoryDescriptor* CBP, bool /* bufferRounding */, UInt32 bufferSize,
+IOReturn CLASS::UIMCreateControlTransfer(short functionNumber,
+                                         short endpointNumber,
+                                         IOUSBCommand* command,
+										 IOMemoryDescriptor* CBP,
+                                         bool /* bufferRounding */,
+                                         UInt32 bufferSize,
 										 short direction)
 {
 	IOReturn rc;
@@ -129,13 +115,7 @@ IOReturn CLASS::UIMCreateControlTransfer(short functionNumber, short endpointNum
 		return kIOUSBEndpointNotFound;
 	if (endpointNumber)
 		return kIOReturnBadArgument;
-#if 0
-	/*
-	 * Note: Added Mavericks
-	 */
-	if (!IsStillConnectedAndEnabled(slot))
-		return kIOReturnNoDevice;
-#endif
+
 	pRing = GetRing(slot, 1, 0U);
 	if (pRing->isInactive())
 		return kIOReturnBadArgument;
@@ -285,13 +265,7 @@ IOReturn CLASS::UIMCreateIsochTransfer(IOUSBIsocCommand* command)
 	if (!command)
 		return kIOReturnBadArgument;
 	curFrameNumber = GetFrameNumber();
-#if 0
-	/*
-	 * Note: Added Mavericks
-	 */
-	if (!IsStillConnectedAndEnabled(GetSlotID(command->GetAddress())))
-		return kIOReturnNoDevice;
-#endif
+
 	transferCount = command->GetNumFrames();
 	if (!transferCount || transferCount > 1000U)
 		return kIOReturnBadArgument;

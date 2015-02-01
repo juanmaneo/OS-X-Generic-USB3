@@ -9,8 +9,7 @@
 #include "GenericUSBXHCI.h"
 #include <IOKit/usb/IOUSBRootHubDevice.h>
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 #pragma mark -
 #pragma mark IOUSBControllerV3 Pure

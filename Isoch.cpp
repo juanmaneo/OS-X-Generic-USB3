@@ -10,8 +10,7 @@
 #include "Isoch.h"
 #include "XHCITypes.h"
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 OSDefineMetaClassAndFinalStructors(GenericUSBXHCIIsochEP, IOUSBControllerIsochEndpoint);
 OSDefineMetaClassAndFinalStructors(GenericUSBXHCIIsochTD, IOUSBControllerIsochListElement);
@@ -374,7 +373,7 @@ void CLASS::AddIsocFramesToSchedule(GenericUSBXHCIIsochEP* pIsochEp)
 		}
 		AddIsocFramesToSchedule_stage2(pIsochEp, nextSlot, &currFrame, &firstMicroFrame);
 	} while (pIsochEp->toDoList);
-
+// TODO: make a function and remove goto ...
 complete:
 	IOSimpleLockUnlock(_isochScheduleLock);
 	if (ringFullAndEmpty)

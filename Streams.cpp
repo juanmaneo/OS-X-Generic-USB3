@@ -10,9 +10,7 @@
 #include "Async.h"
 #include "XHCITypes.h"
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
-
+#include "Config.h"
 
 #pragma mark -
 #pragma mark Sorting Functions

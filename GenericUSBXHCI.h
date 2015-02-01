@@ -127,9 +127,6 @@ private:
 	 * Device Contexts
 	 */
 	struct {
-#if 0
-		uint32_t lock;
-#endif
 		IOBufferMemoryDescriptor*md;// offset 0x998
 		ContextStruct* ptr;			// offset 0x9A0, 0x9A8
 		uint64_t physAddr;			// offset 0x9B0
@@ -151,12 +148,8 @@ private:
 	/*
 	 * Slots
 	 */
-#if 0
-	SlotStruct _slotArray[256];
-									// offset 0x9E0
-#else
 	SlotStruct* _slotArray;
-#endif
+
 	struct {
 		uint8_t HubAddress[kUSBMaxDevices];
 									// offset 0x231E0
@@ -180,9 +173,6 @@ private:
 	int16_t volatile _numEndpoints;	// offset 0x233E6
 	int16_t _maxNumEndpoints;		// offset 0x233E8
 	bool _uimInitialized;			// offset 0x233EA
-#if 0
-	bool volatile _filterInterruptActive;// offset 0x233EB
-#endif
 									// align 4-byte
 	uint64_t volatile _millsecondCounter;
 									// offset 0x233F0
@@ -212,12 +202,7 @@ private:
 	 */
 	bool _rhPortEmulateCSC[kMaxRootPorts];
 									// offset 0x23821
-#if 0
-	bool _rhPortInU3[kMaxRootPorts];
-									// offset 0x23830
-	bool _rhPortSuspendChange[kMaxRootPorts];
-									// offset 0x2383F
-#endif
+
 	bool _rhPortBeingResumed[kMaxRootPorts];
 									// offset 0x2384E
 	bool _rhPortBeingReset[kMaxRootPorts];
@@ -227,12 +212,7 @@ private:
 									// offset 0x23870
 	uint32_t volatile _rhPortStatusChangeBitmap;	// Added
 	uint32_t _rhPortStatusChangeBitmapGated; // Added
-#if 0
-	thread_call_t _rhResetPortThread[kMaxRootPorts];
-									// offset 0x238E8
-	XHCIRootHubResetParams _rhResetParams[kMaxRootPorts];
-									// offset 0x23960
-#endif
+
 #ifdef DEBOUNCING
 	bool _rhPortDebouncing[kMaxRootPorts];
 									// offset 0x239D8
@@ -243,20 +223,10 @@ private:
 	bool _rhPortBeingWarmReset[kMaxRootPorts];
 									// offset 0x23A70
 #endif
-#if 0
-	bool _hasPCIPwrMgmt;			// offset 0x23A7F
-	uint32_t _ExpressCardPort;		// offset 0x23A80
-	bool _badExpressCardAttached;	// offset 0x23A84
-									// align 3-byte
-#endif
+
 	uint32_t volatile _debugCtr;	// offset 0x23A88
 	uint32_t volatile _debugPattern;// offset 0x23A8C
-#if 0
-	uint16_t _rhPrevStatus[1U + kMaxRootPorts];
-									// offset 0x23A90
-	uint16_t _rhChangeBits[1U + kMaxRootPorts];
-									// offset 0x23AB0
-#endif
+
 	uint16_t _RenesasControllerVersion;// offset 0x23AD2
 	uint8_t _HCCLow;				// replaces _is64bit, _csz in 0x23AD4 - 0x23AD5
 									// align 2-byte
@@ -266,9 +236,7 @@ private:
 	bool _muxedPortsSearched;		// offset 0x23AE1
 	bool _inTestMode;				// offset 0x23AE2
 									// align 5-byte
-#if 0
-	uint32_t volatile* _pXHCIPPTChickenBits;// offset 0x23AE8
-#endif
+
 	IOSimpleLock* _isochScheduleLock; // offset 0x23AF0
 	/*
 	 * _tempAnchorTime
@@ -284,16 +252,7 @@ private:
 									// align 5-byte
 	Completer _completer;			// Added
 	IOEventSource* _eventSource;	// Added
-#if 0
-	bool _wakeEnabled;				// Added Mavericks (0x2CFA0)
-	bool _IntelSlotWorkaround;		// Added Mavericks (0x2CFA1)
-	uint32_t _IntelSWSlot;			// Added Mavericks (0x2CFA4)
-	struct {
-		IOBufferMemoryDescriptor*md;// offset 0x23B20
-		uint64_t physAddr;			// offset 0x23B28
-		uint8_t cycleState;			// offset 0x23B30 - originally uint32_t
-	} _spareRing;
-#endif
+
 	char _muxName[kMaxExternalHubPorts * 5U];	// offset 0x23B34
 									// sizeof 0x23B80
 
@@ -521,10 +480,7 @@ public:
 	IOReturn TranslateXHCIStatus(int32_t, uint32_t, bool);
 	static IOReturn TranslateCommandCompletion(int32_t);
 	static IOReturn GatedGetFrameNumberWithTime(OSObject*, void*, void*, void*, void*);
-#if 0
-	IOReturn CheckPeriodicBandwidth(int32_t slot, int32_t endpoint, uint16_t maxPacketSize, int16_t intervalExponent,
-									int32_t epType, uint32_t maxStream, uint32_t maxBurst, uint8_t multiple);
-#endif
+
 	IOReturn AllocStreamsContextArray(ringStruct*, uint32_t);
 	IOReturn configureHub(uint32_t, uint32_t);
 	SlotStruct* SlotPtr(uint8_t slot) { return &_slotArray[slot - 1U]; }
@@ -536,11 +492,7 @@ public:
 	void NukeSlot(uint8_t);
 	IOReturn RHCompleteSuspendOnAllPorts(void);
 	void NotifyRootHubsOfPowerLoss(void);
-#if 0
-	void SantizePortsAfterPowerLoss(void);
-	void DisableWakeBits(void);
-	void EnableWakeBits(void);
-#endif
+
 	static void SleepWithGateReleased(IOCommandGate*, uint32_t);
 	void CheckedSleep(uint32_t);
 	/*
@@ -657,9 +609,7 @@ public:
 	IOReturn EnqueCMD(TRBStruct*, int32_t, TRBCallback, int32_t*);
 	bool DoCMDCompletion(TRBStruct);
 	static void CompleteSlotCommand(GenericUSBXHCI*, TRBStruct*, int32_t*);
-#if 0
-	static void CompleteRenesasVendorCommand(GenericUSBXHCI*, TRBStruct*, int32_t*);
-#endif
+
 	/*
 	 * Event Handling
 	 */
@@ -692,7 +642,6 @@ public:
 	IOReturn XHCIRootHubClearPortConnectionChange(uint16_t);
 	IOReturn XHCIRootHubClearPortChangeBit(uint16_t, uint32_t);
 
-#include "Compatibility.h"
 };
 
 #endif

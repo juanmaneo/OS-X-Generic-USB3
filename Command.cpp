@@ -8,8 +8,7 @@
 
 #include "GenericUSBXHCI.h"
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 #pragma mark -
 #pragma mark Helper
@@ -235,23 +234,3 @@ void CLASS::CompleteSlotCommand(CLASS*, TRBStruct* pTrb, int32_t* param)
 		thread_wakeup_prim(param, FALSE, THREAD_AWAKENED);
 }
 
-#if 0
-/*
- * Note: Unused
- *   This is used to handle TRB_RENESAS_GET_FW command
- *   Lower 16 bits of pTrb->c are FWVersionMajor:FWVersionMinor
- *   each field 8 bits.
- */
-__attribute__((visibility("hidden")))
-void CLASS::CompleteRenesasVendorCommand(CLASS*, TRBStruct* pTrb, int32_t* param)
-{
-	int32_t ret, err = static_cast<int32_t>(XHCI_TRB_2_ERROR_GET(pTrb->c));
-	if (err == XHCI_TRB_ERROR_SUCCESS)
-		ret = static_cast<int32_t>(pTrb->c & UINT16_MAX);
-	else
-		ret = -1000 - err;	// Note: originally 1000 + err
-	*param = ret;
-	if (ml_at_interrupt_context())
-		thread_wakeup_prim(param, FALSE, THREAD_AWAKENED);
-}
-#endif

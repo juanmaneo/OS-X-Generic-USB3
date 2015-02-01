@@ -230,14 +230,15 @@ IOReturn XHCIAsyncEndpoint::Abort(void)
 	}
 	pRing->returnInProgress = false;
 	aborting = false;
-#if 0
-	if (numTDsDone)
-		Complete(provider->GetNeedsReset(pRing->slot) ? kIOReturnNotResponding : kIOReturnAborted);
-#else
-	if (numTDsDone)
-		Complete(kIOReturnAborted);
-#endif
-	return kIOReturnSuccess;
+    
+    IOReturn abortResult = kIOReturnSuccess;
+    
+    if(numTDsDone && provider && pRing)
+        abortResult = provider->GetNeedsReset(pRing->slot) ? kIOReturnNotResponding : kIOReturnAborted;
+    else if(numTDsDone)
+        abortResult = kIOReturnAborted;
+
+	return abortResult;
 }
 
 __attribute__((visibility("hidden")))
@@ -257,19 +258,7 @@ struct XHCIAsyncTD* XHCIAsyncEndpoint::GetTDFromActiveQueueWithIndex(uint16_t in
 	}
 	if (!pTd)
 		return 0;
-#if 0
-	if (pTd == scheduledTail) {
-		if (pTd == scheduledHead) {
-			scheduledTail = 0;
-			scheduledHead = 0;
-		} else
-			scheduledTail = pPrevTd;
-	} else if (pTd == scheduledHead)
-		scheduledHead = pTd->next;
-	else
-		pPrevTd->next = pTd->next;
-	--numTDsScheduled;
-#else
+
 	if (orphanCount) {
 		/*
 		 * Flush all scheduled TDs prior to pTd
@@ -287,7 +276,7 @@ struct XHCIAsyncTD* XHCIAsyncEndpoint::GetTDFromActiveQueueWithIndex(uint16_t in
 			provider->_diagCounters[DIAGCTR_ORPHANEDTDS] += orphanCount;
 	}
 	GetTD(&scheduledHead, &scheduledTail, &numTDsScheduled);
-#endif
+
 	return pTd;
 }
 
@@ -323,24 +312,7 @@ void XHCIAsyncEndpoint::RetireTDs(XHCIAsyncTD* pTd, IOReturn passthruReturnCode,
 						provider->RestartStreams(slot, endpoint, pTd->streamId);
 				}
 				break;
-#if 0
-			case EP_STATE_DISABLED:
-			case EP_STATE_HALTED:
-			case EP_STATE_ERROR:
-#endif
-			default:
-				/*
-				 * Note: Let upstack take care of this EPState by calling
-				 *   UIMAbortStream or UIMClearEndpointStall to clean up the ring.
-				 *   A Halted condition in particular generally requires issuing a
-				 *     ClearFeature(ENDPOINT_HALT) to the device, and
-				 *     ClearFeature(CLEAR_TT_BUFFER) to a TT hub.
-				 *     It can't be fully handled by just ResetEndpoint().
-				 */
-				FlushTDs(pTd->command, 0);
-				MoveTDsFromReadyQToDoneQ(pTd->command);
-				reschedule = false;
-				break;
+
 			case EP_STATE_STOPPED:
 				/*
 				 * Note: Likely coming from UpdateTimeouts()
@@ -352,6 +324,20 @@ void XHCIAsyncEndpoint::RetireTDs(XHCIAsyncTD* pTd, IOReturn passthruReturnCode,
 				else if (scheduledHead)
 					provider->StartEndpoint(slot, endpoint, 0U);
 				break;
+                
+            default:
+                /*
+                 * Note: Let upstack take care of this EPState by calling
+                 *   UIMAbortStream or UIMClearEndpointStall to clean up the ring.
+                 *   A Halted condition in particular generally requires issuing a
+                 *     ClearFeature(ENDPOINT_HALT) to the device, and
+                 *     ClearFeature(CLEAR_TT_BUFFER) to a TT hub.
+                 *     It can't be fully handled by just ResetEndpoint().
+                 */
+                FlushTDs(pTd->command, 0);
+                MoveTDsFromReadyQToDoneQ(pTd->command);
+                reschedule = false;
+                break;
 		}
 	}
 	if (callCompletion)
@@ -413,13 +399,9 @@ void XHCIAsyncEndpoint::FlushTDs(IOUSBCommand* command, int32_t updateDequeueOpt
 		GetTD(&scheduledHead, &scheduledTail, &numTDsScheduled);
 		if (updateDequeueOption) {
 			streamId = pTd->streamId;
-#if 1
 			indexInQueue = pTd->lastTrbIndex + 1;
 			if (indexInQueue >= static_cast<int32_t>(pRing->numTRBs) - 1)
 				indexInQueue = 0;
-#else
-			indexInQueue = GenericUSBXHCI::NextTransferDQ(pRing, pTd->lastTrbIndex);
-#endif
 		}
 		PutTDonDoneQueue(pTd);
 		pTd = scheduledHead;
@@ -434,16 +416,6 @@ void XHCIAsyncEndpoint::FlushTDs(IOUSBCommand* command, int32_t updateDequeueOpt
 	}
 	if (indexInQueue < 0)
 		return;
-#if 0
-	/*
-	 * Note: Added Mavericks
-	 */
-	if (!provider->_controllerAvailable) {
-		pRing->dequeueIndex = static_cast<uint16_t>(indexInQueue);
-		pRing->needsSetTRDQPtr = true;
-		return;
-	}
-#endif
 	provider->SetTRDQPtr(pRing->slot, pRing->endpoint, streamId, indexInQueue);
 }
 
@@ -619,13 +591,10 @@ void XHCIAsyncEndpoint::UpdateTimeouts(bool abortAll, uint32_t frameNumber, bool
 	 * Note: Mavericks updates a couple
 	 *   of diagnostic counters here.
 	 */
-#if 1
 	next = pTd->lastTrbIndex + 1;
 	if (next >= static_cast<int32_t>(pRing->numTRBs) - 1)
 		next = 0;
-#else
-	next = GenericUSBXHCI::NextTransferDQ(pRing, pTd->lastTrbIndex);
-#endif
+    
 	if (!stopped)
 		provider->QuiesceEndpoint(pRing->slot, pRing->endpoint);
 	provider->SetTRDQPtr(pRing->slot, pRing->endpoint, pTd->streamId, next);

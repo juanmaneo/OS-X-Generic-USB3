@@ -11,8 +11,7 @@
 #include "XHCITRB.h"
 #include "XHCITypes.h"
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 #pragma mark -
 #pragma mark IOUSBControllerV2 Pure
@@ -39,26 +38,7 @@ IOReturn CLASS::UIMCreateControlEndpoint(UInt8 functionNumber, UInt8 endpointNum
 		if (retFromCMD == -1 || retFromCMD <= -1000)
 			return retFromCMD == (-1000 - XHCI_TRB_ERROR_NO_SLOTS) ? kIOUSBDeviceCountExceeded : kIOReturnInternalError;
 		slot = static_cast<uint8_t>(retFromCMD);
-#if 0
-		/*
-		 * Note: Added Mavericks
-		 */
-		if (_vendorID == kVendorIntel && _IntelSlotWorkaround && slot == _numSlots) {
-			_IntelSlotWorkaround = false;
-			retFromCMD = CleanupControlEndpoint(slot, true);
-			_IntelSWSlot = slot;
-			if (retFromCMD == -1 || retFromCMD <= -1000)
-				return kIOReturnInternalError;
-			ClearTRB(&localTrb, true);
-			retFromCMD = WaitForCMD(&localTrb, XHCI_TRB_TYPE_ENABLE_SLOT, 0);
-			if (retFromCMD == -1 || retFromCMD <= -1000)
-				return retFromCMD == (-1000 - XHCI_TRB_ERROR_NO_SLOTS) ? kIOUSBDeviceCountExceeded : kIOReturnInternalError;
-			slot = static_cast<uint8_t>(retFromCMD);
-			if (slot == _numSlots)
-				ExecuteGetPortBandwidthWorkaround();
-		}
-		_IntelSlotWorkaround = false;
-#endif
+        
 		if (!slot || slot > _numSlots) {
 			/*
 			 * Sanity check.  Bail out, 'cause UIMDeleteEndpoint
@@ -130,12 +110,7 @@ IOReturn CLASS::UIMCreateControlEndpoint(UInt8 functionNumber, UInt8 endpointNum
 		return kIOReturnInternalError;
 	if (retFromCMD > -1000)
 		return kIOReturnSuccess;
-	if (retFromCMD == -1000 - XHCI_TRB_ERROR_PARAMETER) {
-#if 0
-		PrintContext(GetInputContextPtr());
-		PrintContext(GetInputContextPtr(2));
-#endif
-	}
+    
 	return kIOReturnInternalError;
 }
 

@@ -252,20 +252,6 @@ struct Mavericks_V3ExpansionData {
     bool								x_PMEdisabled;						// tracks when we have disabled the PME handler
     bool								x_minimumIdlePowerStateValid;		// T when we have calculated the minimumIdlePowerState
     bool                                _parentDeviceON;                    // T when our parent device is in the ON power state
-    //UInt32                              _thunderboltMaxBusStall;            // RMBS advertisement value when on thunderbolt
-    
-    // Support for XHCI Thunderbolt Docks and Extra current
-    //SInt32                              _tbCurrentExtra;
-    //SInt32                              _tbCurrentExtraInSleep;
-    //SInt32                              _tbMaxCurrentPerPort;
-    //SInt32                              _tbMaxCurrentPerPortInSleep;
-    //SInt32                              _tbExternalSSPorts;
-    //SInt32                              _tbUnconnectedExternalSSPorts;
-    //SInt32                              _tbRevocableExtraCurrent;
-    //SInt32                              _tbExternalNonSSPortsUsingExtraCurrent;
-    //UInt32                              _tbCaptiveBitmap;
-    //UInt32                              _tbExternalConnectorBitmap;
-    //bool                                _tbBitmapsExist;
 };
 
 // NOTE: Taken from 10.10.0 SDK.
@@ -300,27 +286,6 @@ struct Yosemite_V3ExpansionData {
     bool								x_PMEdisabled;						// tracks when we have disabled the PME handler
     bool								x_minimumIdlePowerStateValid;		// T when we have calculated the minimumIdlePowerState
     bool                                _parentDeviceON;                    // T when our parent device is in the ON power state
-    //UInt32                              _thunderboltMaxBusStall;            // RMBS advertisement value when on thunderbolt
-    
-    // Support for XHCI Thunderbolt Docks and Extra current
-    //SInt32                              _tbCurrentExtra;
-    //SInt32                              _tbCurrentExtraInSleep;
-    //SInt32                              _tbMaxCurrentPerPort;
-    //SInt32                              _tbMaxCurrentPerPortInSleep;
-    //SInt32                              _tbExternalSSPorts;
-    //SInt32                              _tbUnconnectedExternalSSPorts;
-    //SInt32                              _tbRevocableExtraCurrent;
-    //SInt32                              _tbExternalNonSSPortsUsingExtraCurrent;
-    //UInt32                              _tbCaptiveBitmap;
-    //UInt32                              _tbExternalConnectorBitmap;
-    //bool                                _tbBitmapsExist;
-    
-    //bool                                _parentDeviceGoingToPCIPause;			// T when our parent device is going to sleep because of PCI Pause
-    //bool                                _waitingForPCIPauseToFinish;            // T if we have a thread (or more) on commandSleep() waiting for the PCI Pause event to finish
-    //SInt32								_pciPauseQueuedTransactionCount;		// Number of transactions/threads that have been commandSleep()'d due to the system processing a PCI Pause event
-    //bool								_pciPauseTransactionToken[kMaxTransactionsDuringPCIPause];	// Token use to sleep/wake threads that come in during PCI Pause
-    //bool                                _controllerWasResetOnSleep;
-    
 };
 
 // NOTE: This taken from _ExpansionData (IOUSBController) in 10.10 SDK
@@ -390,69 +355,7 @@ protected:
     bool								_rootHubTimerActive;		// UNUSED
     IOUSBRootHubInterruptTransaction	_outstandingRHTrans[4];		// Transactions for the Root Hub.  We need 2, one for the current transaction and one for the next.  This is declared as 4 for binary compatibility
 
-#if 0
-    struct V3ExpansionData {
-        uint32_t							_rootHubPollingRate32;
-        bool								_rootHubTransactionWasAborted;
-        IOPMDriverAssertionID				_externalUSBDeviceAssertionID;		// power manager assertion that we have an external USB device
-        SInt32								_externalDeviceCount;				// the count of external devices in this controller - changed through the WL gate
-        UInt32								_inCheckPowerModeSleeping;			// The CheckPowerModeGated
-        bool								_onThunderbolt;						// T if this controller is on a Thunderbolt bus
-        uint32_t							_thunderboltModelID;				// the model ID of the thunderbolt device in which this controller resides
-        uint32_t							_thunderboltVendorID;				// the vendor ID of the thunderbolt device in which this controller resides
-        UInt8								_rootHubNumPortsSS;					// number of SS root hub ports - should be 15 or fewer! (1-based)
-        UInt8								_rootHubNumPortsHS;					// number of SS root hub ports - should be 15 or fewer! (1-based)
-        UInt8								_rootHubPortsHSStartRange;          // Start port number for the HS Range (1-based)
-        UInt8								_rootHubPortsSSStartRange;          // Start port number for the SS Range (1-based)
-        IOUSBRootHubInterruptTransaction	_outstandingSSRHTrans[4];			// Transactions for the Root Hub.  We need 2, one for the current transaction and one for the next.  This is declared as 4 for binary compatibility
-        bool								_wakingFromStandby;					// t when waking from S4 standby - meaning that the hibernation bit was set but we
-        bool								_rootDomainWakingFromHibernation;   // t when pmrootdomain is between powerWill(ON) and powerDid(ON) while waking from hibernation
-        UInt32								_rootHubStatusChangedBitmapSS;      // support up to 30 ports for status changes - XHCI has 2 Roothubs
-        UInt64								_errata64Bits;						// Bitmap of controller-specific workarounds
-        UInt8								_companionPort[kMaxXHCIPorts+1];    // Mapping between HS and SS port numbers in an XHCI controllers.  This is 1-based, so index 0 does not correspond to a valid port, and a companionPort of 0 indicates no companion port
-        bool								_hasPCIPwrMgmt;                     // Set when PCI power management is avaialable
-        bool								_hibernationWakePart2;              // we are in the middle of the second part of a hibernation wake (OFF(0) to ON(3))
-        AbsoluteTime						_hibernationWakeStartTime;          // the time when we first noticed that we needed to do a hibernation wake
-        UInt16								_powerManagerCSRoffset;				// the offset into Config Space of the Power Manager Control/Status Register
-        IOACPIPlatformDevice				*_acpiDevice;						// our device in the ACPI plane
-        UInt32                              _minimumIdlePowerState;				// the lowest power state this controller will go to when everything is idle (initialized to kUSBPowerStateLowPower)
-        IOInterruptEventSource				*_PMEInterruptEventSource;			// interrupt to wake from RTD3
-        bool								_PMEdisabled;						// tracks when we have disabled the PME handler
-        bool								_minimumIdlePowerStateValid;		// T when we have calculated the minimumIdlePowerState
-        bool                                _parentDeviceON;                    // T when our parent device is in the ON power state
-        UInt32                              _thunderboltMaxBusStall;            // RMBS advertisement value when on thunderbolt
-        
-        // Support for XHCI Thunderbolt Docks and Extra current
-        SInt32                              _tbCurrentExtra;
-        SInt32                              _tbCurrentExtraInSleep;
-        SInt32                              _tbMaxCurrentPerPort;
-        SInt32                              _tbMaxCurrentPerPortInSleep;
-        SInt32                              _tbExternalSSPorts;
-        SInt32                              _tbUnconnectedExternalSSPorts;
-        SInt32                              _tbRevocableExtraCurrent;
-        SInt32                              _tbExternalNonSSPortsUsingExtraCurrent;
-        UInt32                              _tbCaptiveBitmap;
-        UInt32                              _tbExternalConnectorBitmap;
-        bool                                _tbBitmapsExist;
-    };
-#endif
     Mavericks_V3ExpansionData *_v3ExpansionData;
-
-#if 0
-    // TB-relates expansion data
-#define _TB_CURRENTEXTRA						_v3ExpansionData->_tbCurrentExtra
-#define _TB_CURRENTEXTRAINSLEEP                 _v3ExpansionData->_tbCurrentExtraInSleep
-#define _TB_MAXCURRENTPERPORT                   _v3ExpansionData->_tbMaxCurrentPerPort
-#define _TB_MAXCURRENTPERPORTINSLEEP			_v3ExpansionData->_tbMaxCurrentPerPortInSleep
-#define _TB_EXTERNALSSPORTS                     _v3ExpansionData->_tbExternalSSPorts
-#define _TB_UNCONNECTEDEXTERNALSSPORTS			_v3ExpansionData->_tbUnconnectedExternalSSPorts
-#define _TB_REVOCABLEEXTRACURRENT               _v3ExpansionData->_tbRevocableExtraCurrent
-#define _TB_EXTERNALNONSSPORTSUSINGEXTRACURRENT _v3ExpansionData->_tbExternalNonSSPortsUsingExtraCurrent
-#define _TB_CAPTIVEBITMAP                       _v3ExpansionData->_tbCaptiveBitmap
-#define _TB_EXTERNALCONNECTORBITMAP             _v3ExpansionData->_tbExternalConnectorBitmap
-#define _TB_BITMAPS_EXIST                       _v3ExpansionData->_tbBitmapsExist
-    
-#endif//0
     
     // IOKit methods
     virtual bool					init( OSDictionary *  propTable );

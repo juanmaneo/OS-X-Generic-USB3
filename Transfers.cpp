@@ -11,8 +11,7 @@
 #include "Isoch.h"
 #include "XHCITypes.h"
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 #pragma mark -
 #pragma mark Transfers
@@ -24,13 +23,7 @@ IOReturn CLASS::CreateTransfer(IOUSBCommand* command, uint32_t streamId)
 	uint8_t slot = GetSlotID(command->GetAddress());
 	if (!slot)
 		return kIOUSBEndpointNotFound;
-#if 0
-	/*
-	 * Note: Added Mavericks
-	 */
-	if (!IsStillConnectedAndEnabled(slot))
-		return kIOReturnNoDevice;
-#endif
+
 	uint8_t endpoint = TranslateEndpoint(command->GetEndpoint(), command->GetDirection());
 	if (endpoint < 2U || endpoint >= kUSBMaxPipes)
 		return kIOReturnBadArgument;
@@ -106,15 +99,7 @@ IOReturn CLASS::ReinitTransferRing(int32_t slot, int32_t endpoint, uint32_t stre
 		pRing->lastSeenFrame = 0U;
 		pRing->nextIsocFrame = 0ULL;
 	}
-#if 0
-	/*
-	 * Added Mavericks
-	 */
-	if (!_controllerAvailable) {
-		pRing->needsSetTRDQPtr = true;
-		return kIOReturnSuccess;
-	}
-#endif
+
 	retFromCMD = SetTRDQPtr(slot, endpoint, streamId, pRing->dequeueIndex);
 	/*
 	 * Note: Ignore a context state error because CreateEndpoint doesn't
@@ -181,10 +166,7 @@ int32_t CLASS::SetTRDQPtr(int32_t slot, int32_t endpoint, uint32_t streamId, int
 		pRing->dequeueIndex = static_cast<uint16_t>(index);
 		return retFromCMD;
 	}
-#if 0
-	PrintContext(GetSlotContext(slot));
-	PrintContext(pContext);
-#endif
+
 	return retFromCMD;
 }
 
@@ -194,10 +176,6 @@ void CLASS::ParkRing(uint8_t slot, uint8_t endpoint)
 	int32_t retFromCMD;
 	TRBStruct localTrb = { 0 };
 
-#if 0
-	if (GetSlCtxSpeed(GetSlotContext(slot)) > kUSBDeviceSpeedHigh)
-		return;
-#endif
 	localTrb.d |= XHCI_TRB_3_SLOT_SET(static_cast<uint32_t>(slot));
 	localTrb.d |= XHCI_TRB_3_EP_SET(static_cast<uint32_t>(endpoint));
 	/*
@@ -209,10 +187,7 @@ void CLASS::ParkRing(uint8_t slot, uint8_t endpoint)
 	retFromCMD = WaitForCMD(&localTrb, XHCI_TRB_TYPE_SET_TR_DEQUEUE, 0);
 	if (retFromCMD != -1 && retFromCMD > -1000)
 		return;
-#if 0
-	PrintContext(GetSlotContext(slot));
-	PrintContext(GetSlotContext(slot, endpoint));
-#endif
+
 }
 
 __attribute__((visibility("hidden")))
@@ -279,19 +254,7 @@ uint32_t CLASS::FreeSlotsOnRing(ringStruct const* pRing)
 	if (pRing->enqueueIndex < pRing->dequeueIndex)
 		return pRing->dequeueIndex - 1U - pRing->enqueueIndex;
 	uint32_t v = pRing->dequeueIndex + pRing->numTRBs - pRing->enqueueIndex;
-#if 0
-	if (GetSlCtxSpeed(GetSlotContext(pRing->slot)) >= kUSBDeviceSpeedSuper) {
-		uint32_t maxPacketSize, maxBurst, mult, align;
-		ContextStruct* epContext = GetSlotContext(pRing->slot, pRing->endpoint);
-		maxPacketSize = XHCI_EPCTX_1_MAXP_SIZE_GET(epContext->_e.dwEpCtx1);
-		maxBurst = XHCI_EPCTX_1_MAXB_GET(epContext->_e.dwEpCtx1) + 1U;
-		mult = XHCI_EPCTX_0_MULT_GET(epContext->_e.dwEpCtx0) + 1U;
-		align = 1U + (maxPacketSize * maxBurst * mult) / 4096U;
-		if (v > align)
-			return v - align;
-		return 0U;
-	}
-#endif
+
 	if (v > 3U)
 		return v - 3U;
 	return 0U;
@@ -668,9 +631,6 @@ void CLASS::PutBackTRB(ringStruct* pRing, TRBStruct* pTrb)
 __attribute__((visibility("hidden")))
 bool CLASS::DoSoftRetries(uint32_t trb_shortfall, uint32_t slot, uint32_t endpoint, uint64_t trb_addr)
 {
-#if 0
-	uint8_t port;
-#endif
 	ringStruct* pRing = GetRing(slot, endpoint, 0U);
 	if (!pRing)
 		return false;
@@ -683,23 +643,9 @@ bool CLASS::DoSoftRetries(uint32_t trb_shortfall, uint32_t slot, uint32_t endpoi
 		pRing->softRetries.addr = trb_addr;
 		pRing->softRetries.shortfall = 0U;
 	} else if ((++pRing->softRetries.count) > 2U) {
-#if 0
-		++this->0x23E7C;
-#endif
 		return false;
 	}
-#if 0
-	++this->0x23E6C;
-	port = getRootPortNumber(slot) - 1U;
-	if (port < _rootHubNumPorts) {
-		uint32_t portSC = Read32Reg(&_pXHCIOperationalRegisters->prs[port].PortSC);
-		if (!m_invalid_regspace && (portSC & XHCI_PS_CCS)) {
-			// increment some counter 0x23E88, 0x23E90, 0x2CF90
-		}
-	}
-	if (pRing->softRetries.count == 2U)
-		++this->0x23E74;
-#endif
+
 	ResetEndpoint(slot, endpoint, true);
 	if (IsStreamsEndpoint(slot, endpoint))
 		RestartStreams(slot, endpoint, 0U);

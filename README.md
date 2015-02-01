@@ -1,7 +1,15 @@
-## Fork of Zenith432's GenericUSBXHCI USB 3.0 Driver by RehabMan
+This is an OSX driver for the USB 3.0 express card (ECUSB3S11) from startech.com
 
+The specs are here :
+http://www.startech.com/Cards-Adapters/USB-3.0/Cards/1-Port-Flush-Mount-ExpressCard-SuperSpeed-USB-3-Card-Adapter~ECUSB3S1
 
-### How to Install:
+## It's based on GenericUSBXHCI USB 3.0 driver first from original author Zenith432 (http://sourceforge.net/p/genericusbxhci/code/ci/master/tree/), and after by RehabMan (https://github.com/RehabMan/OS-X-Generic-USB3)
+
+A rewrite is ongoing, to cleanup code by only targeting Yosemite for now and Renesas chipset functionality used in the startech express card.
+
+An custom installer will also be added as described in Apple's documentation : https://developer.apple.com/library/mac/documentation/Darwin/Conceptual/KEXTConcept/KEXTConceptPackaging/packaging_tutorial.html
+
+### How to Install (until an installer is provided) :
 
 Install GenericUSBXHCI.kext using Kext Wizard or your favorite kext installer.
 

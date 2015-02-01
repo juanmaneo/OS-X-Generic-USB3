@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		37448F301A7DBAF600E3DBAE /* Config.h in Headers */ = {isa = PBXBuildFile; fileRef = 37448F2F1A7DBAF600E3DBAE /* Config.h */; };
 		E508CA0016A2030B005DEF4F /* Accessors.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E508C9FF16A2030B005DEF4F /* Accessors.cpp */; };
 		E50946D21806FC3C0034259A /* Async.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E50946D11806FC3C0034259A /* Async.cpp */; };
 		E50C5E3F16EF37FE00D655E1 /* Isoch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E50C5E3E16EF37FE00D655E1 /* Isoch.cpp */; };
@@ -36,11 +37,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		37448F2F1A7DBAF600E3DBAE /* Config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Config.h; sourceTree = "<group>"; };
 		E508C9FF16A2030B005DEF4F /* Accessors.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Accessors.cpp; sourceTree = "<group>"; };
 		E50946D11806FC3C0034259A /* Async.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Async.cpp; sourceTree = "<group>"; };
 		E50C5E3E16EF37FE00D655E1 /* Isoch.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Isoch.cpp; sourceTree = "<group>"; };
 		E50C5E4016EF381600D655E1 /* Isoch.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Isoch.h; sourceTree = "<group>"; };
-		E50CAA1B19C0B17700E2412C /* Compatibility.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Compatibility.h; sourceTree = "<group>"; };
 		E50CAA1C19C0B74900E2412C /* Compatibility.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Compatibility.cpp; sourceTree = "<group>"; };
 		E518655A1695EFE400F068CF /* Private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Private.h; sourceTree = "<group>"; };
 		E52B1AC3168BA6D600860CF2 /* Leaf_Methods.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Leaf_Methods.cpp; sourceTree = "<group>"; };
@@ -88,6 +89,56 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		37448F311A7DBB0100E3DBAE /* headers */ = {
+			isa = PBXGroup;
+			children = (
+				E5D5A40616C80BFA0087F0E9 /* Async.h */,
+				E5FD15B7181180370035DB81 /* Completer.h */,
+				37448F2F1A7DBAF600E3DBAE /* Config.h */,
+				E5D81FFD166F8ABF0075A356 /* GenericUSBXHCI.h */,
+				E5FA97CA16BEE6920026B0FD /* GenericUSBXHCIUserClient.h */,
+				E50C5E4016EF381600D655E1 /* Isoch.h */,
+				E518655A1695EFE400F068CF /* Private.h */,
+				E5D225F1167B758400519E3E /* XHCIRegs.h */,
+				E5D4CB6F16B4307800A81AB7 /* XHCITRB.h */,
+				E5E863C216B3EAE900C8C1AC /* XHCITypes.h */,
+			);
+			name = headers;
+			sourceTree = "<group>";
+		};
+		37448F321A7DBB2200E3DBAE /* src */ = {
+			isa = PBXGroup;
+			children = (
+				E508C9FF16A2030B005DEF4F /* Accessors.cpp */,
+				E50946D11806FC3C0034259A /* Async.cpp */,
+				E5D588C316B563CC002E8D56 /* Command.cpp */,
+				E50CAA1C19C0B74900E2412C /* Compatibility.cpp */,
+				E5FD15B81811804B0035DB81 /* Completer.cpp */,
+				E5EA8C7E169822C800A263A2 /* Diagnostics.cpp */,
+				E5D4CB7116B4422200A81AB7 /* Endpoints.cpp */,
+				E5D81FFE166F8ABF0075A356 /* GenericUSBXHCI.cpp */,
+				E5FC455B181D65A2007BFF5B /* GenericUSBXHCIEventSource.cpp */,
+				E5FA97C916BEE6920026B0FD /* GenericUSBXHCIUserClient.cpp */,
+				E5EA8C811698239100A263A2 /* Interrupts.cpp */,
+				E50C5E3E16EF37FE00D655E1 /* Isoch.cpp */,
+				E52B1AC3168BA6D600860CF2 /* Leaf_Methods.cpp */,
+				E5EA8C831698241A00A263A2 /* PwrMgmt.cpp */,
+				E53AAC2F1807016B0050AC2C /* Rings.cpp */,
+				E5D170DE16ADFDE9004F0277 /* RootHub.cpp */,
+				E5DE3C4718070046007D70A7 /* Slots.cpp */,
+				E5AE45A81805D01D000813E4 /* Streams.cpp */,
+				E5A3497116C7B79500F86B90 /* Transfers.cpp */,
+				E5D4CB7316B4432300A81AB7 /* UnXHCI.cpp */,
+				E5DE0B26168BAC3A002BD641 /* V1Overrides.cpp */,
+				E5DE0B2B168BAC5E002BD641 /* V1Pure.cpp */,
+				E5C71C19168BAA530066307F /* V2Overrides.cpp */,
+				E5C71C15168BAA480066307F /* V2Pure.cpp */,
+				E5C71C11168BA9CC0066307F /* V3Overrides.cpp */,
+				E52B1AC8168BA86400860CF2 /* V3Pure.cpp */,
+			);
+			name = src;
+			sourceTree = "<group>";
+		};
 		E5D81FE5166F8ABF0075A356 = {
 			isa = PBXGroup;
 			children = (
@@ -124,42 +175,8 @@
 		E5D81FF7166F8ABF0075A356 /* GenericUSBXHCI */ = {
 			isa = PBXGroup;
 			children = (
-				E508C9FF16A2030B005DEF4F /* Accessors.cpp */,
-				E5D5A40616C80BFA0087F0E9 /* Async.h */,
-				E50946D11806FC3C0034259A /* Async.cpp */,
-				E5D588C316B563CC002E8D56 /* Command.cpp */,
-				E50CAA1B19C0B17700E2412C /* Compatibility.h */,
-				E50CAA1C19C0B74900E2412C /* Compatibility.cpp */,
-				E5FD15B7181180370035DB81 /* Completer.h */,
-				E5FD15B81811804B0035DB81 /* Completer.cpp */,
-				E5EA8C7E169822C800A263A2 /* Diagnostics.cpp */,
-				E5D4CB7116B4422200A81AB7 /* Endpoints.cpp */,
-				E5D81FFD166F8ABF0075A356 /* GenericUSBXHCI.h */,
-				E5FA97CA16BEE6920026B0FD /* GenericUSBXHCIUserClient.h */,
-				E5D81FFE166F8ABF0075A356 /* GenericUSBXHCI.cpp */,
-				E5FC455B181D65A2007BFF5B /* GenericUSBXHCIEventSource.cpp */,
-				E5FA97C916BEE6920026B0FD /* GenericUSBXHCIUserClient.cpp */,
-				E5EA8C811698239100A263A2 /* Interrupts.cpp */,
-				E50C5E4016EF381600D655E1 /* Isoch.h */,
-				E50C5E3E16EF37FE00D655E1 /* Isoch.cpp */,
-				E52B1AC3168BA6D600860CF2 /* Leaf_Methods.cpp */,
-				E518655A1695EFE400F068CF /* Private.h */,
-				E5EA8C831698241A00A263A2 /* PwrMgmt.cpp */,
-				E53AAC2F1807016B0050AC2C /* Rings.cpp */,
-				E5D170DE16ADFDE9004F0277 /* RootHub.cpp */,
-				E5DE3C4718070046007D70A7 /* Slots.cpp */,
-				E5AE45A81805D01D000813E4 /* Streams.cpp */,
-				E5A3497116C7B79500F86B90 /* Transfers.cpp */,
-				E5D4CB7316B4432300A81AB7 /* UnXHCI.cpp */,
-				E5DE0B26168BAC3A002BD641 /* V1Overrides.cpp */,
-				E5DE0B2B168BAC5E002BD641 /* V1Pure.cpp */,
-				E5C71C19168BAA530066307F /* V2Overrides.cpp */,
-				E5C71C15168BAA480066307F /* V2Pure.cpp */,
-				E5C71C11168BA9CC0066307F /* V3Overrides.cpp */,
-				E52B1AC8168BA86400860CF2 /* V3Pure.cpp */,
-				E5D225F1167B758400519E3E /* XHCIRegs.h */,
-				E5D4CB6F16B4307800A81AB7 /* XHCITRB.h */,
-				E5E863C216B3EAE900C8C1AC /* XHCITypes.h */,
+				37448F311A7DBB0100E3DBAE /* headers */,
+				37448F321A7DBB2200E3DBAE /* src */,
 				E5D81FF8166F8ABF0075A356 /* Supporting Files */,
 			);
 			name = GenericUSBXHCI;
@@ -181,6 +198,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				37448F301A7DBAF600E3DBAE /* Config.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -317,7 +335,7 @@
 				);
 				OTHER_LDFLAGS = "-Wl,-no_source_version";
 				"OTHER_LDFLAGS[arch=x86_64]" = "-dead_strip";
-				SDKROOT = macosx10.8;
+				SDKROOT = macosx;
 				STRIPFLAGS = "-no_uuid";
 				STRIP_STYLE = "non-global";
 			};

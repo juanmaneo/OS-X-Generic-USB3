@@ -12,8 +12,7 @@
 #include "XHCITypes.h"
 #include <IOKit/IOFilterInterruptEventSource.h>
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 extern "C" uint64_t ml_cpu_int_event_time(void);	// Note: in com.apple.kpi.unsupported
 
@@ -33,18 +32,11 @@ void CLASS::InterruptHandler(OSObject* owner, IOInterruptEventSource*, int)
 	 * Threaded Handler Context
 	 */
 	CLASS* controller = static_cast<CLASS*>(owner);
-#if 0
-	static bool emitted;
-#endif
 	if (!controller ||
 		controller->isInactive() ||
 		controller->m_invalid_regspace ||
 		!controller->_controllerAvailable)
 		return;
-#if 0
-	if (!emitted)
-		emitted = true;
-#endif
 	controller->PollInterrupts(0);
 }
 
@@ -77,13 +69,8 @@ bool CLASS::PrimaryInterruptFilter(OSObject* owner, IOFilterInterruptEventSource
 	}
 	// Process this interrupt
 	//
-#if 0
-	controller->_filterInterruptActive = true;
-#endif
 	controller->FilterInterrupt(source);
-#if 0
-	controller->_filterInterruptActive = false;
-#endif
+
 	return false;
 }
 
@@ -95,20 +82,6 @@ void CLASS::FilterInterrupt(IOFilterInterruptEventSource* source)
 	 */
 	bool invokeContinuation = false;
 	int32_t interrupter = source->getIntIndex() - _baseInterruptIndex;
-#if 0
-	if (!interrupter) {
-		uint32_t sts = Read32Reg(&_pXHCIOperationalRegisters->USBSts);
-		if (m_invalid_regspace) {
-			source->disable();	// Note: For MSI this is a no-op
-			return;
-		}
-#if 0
-		Write32Reg(&_pXHCIOperationalRegisters->USBSts, XHCI_STS_EINT);	// clear XHCI_STS_EINT
-#endif
-		if (sts & XHCI_STS_HSE)
-			invokeContinuation = true;
-	}
-#endif
 	if (preFilterEventRing(source, interrupter)) {
 		static_cast<void>(__sync_fetch_and_add(&_interruptCounters[0], 1));
 		while (FilterEventRing(interrupter, &invokeContinuation));
@@ -179,9 +152,6 @@ bool CLASS::FilterEventRing(int32_t interrupter, bool* pInvokeContinuation)
 	 */
 	uint8_t rhPort, cb;
 	uint16_t next;
-#if 0
-	uint32_t mfIndex;
-#endif
 	TRBStruct localTrb;
 	EventRingStruct* ePtr = &_eventRing[interrupter];
 	cb = ePtr->cycleState;
@@ -211,16 +181,7 @@ bool CLASS::FilterEventRing(int32_t interrupter, bool* pInvokeContinuation)
 			return true;
 		case XHCI_TRB_EVENT_MFINDEX_WRAP:
 			_millsecondCounter += 2048U;	// 2^14 * 0.125 us = 2048 ms
-#if 0
-			PrintEventTRB(&localTrb, interrupter, true, 0);
-			mfIndex = Read32Reg(&_pXHCIRuntimeRegisters->MFIndex);
-			if (m_invalid_regspace)
-				return false;
-			mfIndex &= XHCI_MFINDEX_MASK;
-			_millsecondsTimers[2] = _millsecondCounter + (mfIndex / 8U);
-#else
 			_millsecondsTimers[2] = _millsecondCounter;
-#endif
 			_millsecondsTimers[0] = ml_cpu_int_event_time();	// Note: time stored by kernel interrupt handler close to interrupt entry
 			break;
 		case XHCI_TRB_EVENT_PORT_STS_CHANGE:
@@ -230,11 +191,6 @@ bool CLASS::FilterEventRing(int32_t interrupter, bool* pInvokeContinuation)
 			if (pInvokeContinuation)	// Note: Invoke PollInterrupts to perform code qualified by XHCI_STS_PCD
 				*pInvokeContinuation = true;
 			return true;
-#if 0
-		default:
-			PrintEventTRB(&localTrb, interrupter, true, 0);
-			break;
-#endif
 	}
 	next = ePtr->bounceEnqueueIndex + 1U;
 	if (next >= ePtr->numBounceEntries)
@@ -276,14 +232,6 @@ bool CLASS::PollEventRing2(int32_t interrupter)
 		IOLog("%s: Secondary event queue %d overflowed: %d\n", __FUNCTION__,
 			  interrupter, value);
 	}
-#if 0
-	value = __sync_lock_test_and_set(&_debugFlag, 0);
-	if (value > 0)
-		IOLog("%s: DebugFlags: %d\n", __FUNCTION__, value);
-	value = __sync_lock_test_and_set(&_errorCounters[2], 0);
-	if (value > 0)
-		IOLog("%s: Event changed after reading: %d\n", __FUNCTION__, value);
-#endif
 	value = __sync_lock_test_and_set(&_errorCounters[3], 0);
 	if (value > 0)
 		IOLog("%s: Isoc problems: %d\n", __FUNCTION__, value);
@@ -320,30 +268,16 @@ bool CLASS::PollEventRing2(int32_t interrupter)
 			if (!processTransferEvent2(&localTrb, interrupter))
 				++_diagCounters[DIAGCTR_XFERERR];
 			break;
-#if 0
-		case XHCI_TRB_EVENT_PORT_STS_CHANGE:
-			PrintEventTRB(&localTrb, interrupter, false, 0);
-			EnsureUsability();	 // Note: This is done in PollInterrupts using PCD
-			break;
-#endif
 		case XHCI_TRB_EVENT_MFINDEX_WRAP:
 			_millsecondsTimers[1] = _millsecondsTimers[0];
 			_millsecondsTimers[3] = _millsecondsTimers[2];
-#if 0
-			PrintEventTRB(&localTrb, interrupter, false, 0);
-#endif
 			break;
 		case XHCI_TRB_EVENT_DEVICE_NOTIFY:
-#if 0
-			PrintEventTRB(&localTrb, interrupter, false, 0);
-#else
 			IOLog("%s: Device Notification, slot %u, err %u, data %#llx, type %u\n", __FUNCTION__,
 				  localTrb.d >> 24, localTrb.c >> 24,
 				  (static_cast<uint64_t>(localTrb.b) << 24) | (localTrb.a >> 8),
 				  (localTrb.a >> 4) & 15U);
-#endif
 			break;
-#if 1
 		case XHCI_TRB_EVENT_BW_REQUEST:
 			IOLog("%s: Bandwidth Request, slot %u, err %u\n", __FUNCTION__,
 				  localTrb.d >> 24, localTrb.c >> 24);
@@ -351,7 +285,6 @@ bool CLASS::PollEventRing2(int32_t interrupter)
 		case XHCI_TRB_EVENT_HOST_CTRL:
 			IOLog("%s: Host Controller, err %u\n", __FUNCTION__, localTrb.c >> 24);
 			break;
-#endif
 	}
 	return true;
 
@@ -389,9 +322,6 @@ void CLASS::PollForCMDCompletions(int32_t interrupter)
 					err != XHCI_TRB_ERROR_LENGTH)
 					break;
 				ClearTRB(&ePtr->bounceQueuePtr[index], false);
-#if 0
-				PrintEventTRB(&localTrb, interrupter, false, 0);
-#endif
 				if (!DoStopCompletion(&localTrb))
 					++_diagCounters[DIAGCTR_XFERERR];
 				break;
@@ -400,9 +330,6 @@ void CLASS::PollForCMDCompletions(int32_t interrupter)
 					break;
 			case XHCI_TRB_EVENT_CMD_COMPLETE:
 				ClearTRB(&ePtr->bounceQueuePtr[index], false);
-#if 0
-				PrintEventTRB(&localTrb, 0, false, 0);
-#endif
 				if (!DoCMDCompletion(localTrb))
 					++_diagCounters[DIAGCTR_CMDERR];
 				break;
@@ -696,11 +623,6 @@ bool CLASS::processTransferEvent2(TRBStruct const* pTrb, int32_t interrupter)
 	}
 	if (slot <= 0 || slot > _numSlots || ConstSlotPtr(slot)->isInactive() || !endpoint)
 		return false;
-#if 0
-	if (err == XHCI_TRB_ERROR_XACT &&
-		DoSoftRetries(shortfall, slot, endpoint, addr))
-		return true;
-#endif
 	if (IsStreamsEndpoint(slot, endpoint)) {
 		if (!addr)
 			return false;	// save the trouble
@@ -735,19 +657,12 @@ bool CLASS::processTransferEvent2(TRBStruct const* pTrb, int32_t interrupter)
 			return true;
 		trbIndexInRingQueue = static_cast<int32_t>(diffIndex64);
 	}
-#if 0
-	PrintEventTRB(pTrb, interrupter, false, pRing);
-#endif
 	if ((pRing->epType | CTRL_EP) == ISOC_IN_EP) {
 	update_dq_and_done:
-#if 1
 		next = static_cast<uint16_t>(trbIndexInRingQueue + 1);
 		if (next >= pRing->numTRBs - 1U)
 			next = 0U;
 		pRing->dequeueIndex = next;
-#else
-		pRing->dequeueIndex = NextTransferDQ(pRing, trbIndexInRingQueue);
-#endif
 		return true;
 	}
 	pAsyncEp = pRing->asyncEndpoint;
@@ -773,14 +688,10 @@ bool CLASS::processTransferEvent2(TRBStruct const* pTrb, int32_t interrupter)
 	 */
 	if (pRing->enqueueIndex == pRing->dequeueIndex)
 		return true;
-#if 1
 	next = static_cast<uint16_t>(trbIndexInRingQueue + 1);
 	if (next >= pRing->numTRBs - 1U)
 		next = 0U;
 	pRing->dequeueIndex = next;
-#else
-	pRing->dequeueIndex = NextTransferDQ(pRing, trbIndexInRingQueue);
-#endif
 	if (ED) {
 		shortfall = pAsyncTd->bytesThisTD - shortfall;
 		if (_errataBits & kErrataAbsoluteEDTLA) {

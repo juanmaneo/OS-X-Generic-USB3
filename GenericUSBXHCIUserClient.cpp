@@ -11,13 +11,11 @@
 #include <IOKit/IOLib.h>
 #include <IOKit/IOBufferMemoryDescriptor.h>
 
-#define CLASS GenericUSBXHCIUserClient
-#define super IOUserClient
 OSDefineMetaClassAndFinalStructors(GenericUSBXHCIUserClient, IOUserClient);
 
-#pragma mark -
-#pragma mark Helpers
-#pragma mark -
+extern "C" void ListOptions(PrintSink* pSink);
+
+// Helpers
 
 struct BufferedPrintSink : PrintSink
 {
@@ -73,17 +71,6 @@ IOReturn MakeMemoryAndPrintSink(size_t capacity, IOBufferMemoryDescriptor** pMd,
 	return kIOReturnSuccess;
 }
 
-#pragma mark -
-#pragma mark User Client
-#pragma mark -
-
-IOReturn CLASS::clientClose(void)
-{
-	if (!terminate())
-		IOLog("GenericUSBXHCIUserClient::%s: terminate failed.\n", __FUNCTION__);
-	return kIOReturnSuccess;
-}
-
 static
 IOReturn GatedPrintCapRegs(OSObject* owner, void* pSink, void*, void*, void*)
 {
@@ -120,9 +107,14 @@ IOReturn GatedPrintRootHubPortBandwidth(OSObject* owner, void* pSink, void*, voi
 	return kIOReturnSuccess;
 }
 
-extern "C" void ListOptions(PrintSink* pSink);
+IOReturn GenericUSBXHCIUserClient::clientClose(void)
+{
+    if (!terminate())
+        IOLog("GenericUSBXHCIUserClient::%s: terminate failed.\n", __FUNCTION__);
+    return kIOReturnSuccess;
+}
 
-IOReturn CLASS::clientMemoryForType(UInt32 type, IOOptionBits* options, IOMemoryDescriptor** memory)
+IOReturn GenericUSBXHCIUserClient::clientMemoryForType(UInt32 type, IOOptionBits* options, IOMemoryDescriptor** memory)
 {
 	IOBufferMemoryDescriptor* md;
 	IOMemoryMap* kernelMap;

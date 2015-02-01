@@ -13,8 +13,7 @@
 #include <IOKit/IOFilterInterruptEventSource.h>
 #include <IOKit/usb/IOUSBRootHubDevice.h>
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 #pragma mark -
 #pragma mark IOUSBController Pure
@@ -56,31 +55,14 @@ IOReturn CLASS::UIMInitialize(IOService* provider)
 		_expansionData->_isochMaxBusStall = 25000U;
 	OverrideErrataFromProps();
 	_pXHCICapRegisters = reinterpret_cast<struct XHCICapRegisters volatile*>(_deviceBase->getVirtualAddress());
-#if 0
-	if (m_invalid_regspace) {
-		UIMFinalize();
-		return kIOReturnNoDevice;
-	}
-#endif
+
 	/*
 	 * TBD: This also disables bus-mastering.  Bios may still
 	 *   own the xHC.  Is that a problem?
 	 */
 	// enable the card registers
 	_device->configWrite16(kIOPCIConfigCommand, kIOPCICommandMemorySpace);
-#if 0
-	uint16_t hciv = Read16Reg(&_pXHCICapRegisters->HCIVersion);
-	if (m_invalid_regspace) {
-		IOLog("%s: Invalid regspace (1)\n", __FUNCTION__);
-		UIMFinalize();
-		return kIOReturnNoDevice;
-	}
-	if (hciv < 0x100U) {
-		IOLog("%s: Unsupported xHC version %#x\n", __FUNCTION__, static_cast<uint32_t>(hciv));
-		UIMFinalize();
-		return kIOReturnUnsupported;
-	}
-#endif
+
 	uint32_t hcp1 = Read32Reg(&_pXHCICapRegisters->HCSParams[0]);
 	if (m_invalid_regspace) {
 		IOLog("%s: Invalid regspace (2)\n", __FUNCTION__);
@@ -187,12 +169,7 @@ IOReturn CLASS::UIMInitialize(IOService* provider)
 	}
 	Write32Reg(&_pXHCIOperationalRegisters->Config, (u & ~XHCI_CONFIG_SLOTS_MASK) | _numSlots);
 	Write32Reg(&_pXHCIOperationalRegisters->DNCtrl, UINT16_MAX);
-#if 0
-	if (_maxNumEndpoints < gXHCIEPlimit) {
-		_maxNumEndpoints = gXHCIEPlimit;
-		setProperty("Max XHCI EPs", gXHCIEPlimit, 16U);
-	}
-#endif
+
 	_slotArray = static_cast<SlotStruct*>(IOMalloc(static_cast<size_t>(_numSlots) * sizeof *_slotArray));
 	if (!_slotArray) {
 		IOLog("%s: Failed to allocate memory for slots\n", __FUNCTION__);
@@ -211,9 +188,7 @@ IOReturn CLASS::UIMInitialize(IOService* provider)
 		UIMFinalize();
 		return rc;
 	}
-#if 0
-	bzero(_dcbaa.ptr, (1U + static_cast<size_t>(_numSlots)) * sizeof *_dcbaa.ptr);
-#endif
+
 	Write64Reg(&_pXHCIOperationalRegisters->DCBAap, _dcbaa.physAddr, false);
 	_commandRing.numTRBs = PAGE_SIZE / sizeof *_commandRing.ptr;
 	_commandRing.callbacks = static_cast<TRBCallbackEntry*>(IOMalloc(static_cast<size_t>(_commandRing.numTRBs) * sizeof *_commandRing.callbacks));
@@ -265,9 +240,7 @@ IOReturn CLASS::UIMInitialize(IOService* provider)
 		return rc;
 	}
 	_scratchpadBuffers.max = static_cast<uint8_t>(XHCI_HCS2_SPB_MAX(hcp2));
-#if 0
-	_maxScratchpadBuffers |= ((hcp2 >> 16) & 0x3E0U);	// Note: These are listed as reserved in xHCI 1.0 Spec
-#endif
+
 	rc = AllocScratchpadBuffers();
 	if (rc != kIOReturnSuccess) {
 		UIMFinalize();
@@ -280,9 +253,7 @@ IOReturn CLASS::UIMInitialize(IOService* provider)
 	RHPortStatusChangeBitmapInit();
 	_isSleeping = false;
 	_deviceZero.isBeingAddressed = false;
-#if 0
-	_filterInterruptActive = false;
-#endif
+
 	_millsecondCounter = 0ULL;
 	bzero(&_interruptCounters[0], sizeof _interruptCounters);
 	_HSEDetected = false;
@@ -426,20 +397,9 @@ IOReturn CLASS::UIMDeleteEndpoint(short functionNumber, short endpointNumber, sh
 		if (!pRing->isInactive())
 			return kIOReturnSuccess;
 	}
-#if 0
-	/*
-	 * Note: Mavericks
-	 */
-	if (!_controllerAvailable)
-		goto _Skip_CleanupControlEndpoint_And_IntelSWSlot;
-#endif
+
 	CleanupControlEndpoint(slot, true);
-#if 0
-	/*
-	 * Note: Mavericks
-	 */
-	_IntelSWSlot = slot;
-#endif
+
 	pSlot->ctx = 0;
 	SetDCBAAAddr64(&_dcbaa.ptr[slot], 0ULL);
 	if (pSlot->md) {
@@ -481,53 +441,6 @@ IOReturn CLASS::UIMClearEndpointStall(short functionNumber, short endpointNumber
 
 void CLASS::UIMRootHubStatusChange(void)
 {
-#if 0
-	uint16_t statusChangedBitmap = 0U;
-	IOUSBHubStatus hubStatus;
-	IOUSBHubPortStatus portStatus;
-	uint32_t statusBit = 1U, portToCheck;
-	uint32_t sts = Read32Reg(&_pXHCIOperationalRegisters->USBSts);
-	if (m_invalid_regspace)
-		return;
-	if ((sts & XHCI_STS_HSE) && !_HSEDetected) {
-		IOLog("%s: HSE bit set:%#x (1)\n", __FUNCTION__, sts);
-		_HSEDetected = true;
-	}
-	if (!_controllerAvailable || _wakingFromHibernation)
-		return;
-	RHCheckForPortResumes();
-	if (GetRootHubStatus(&hubStatus) != kIOReturnSuccess) {
-		_rootHubStatusChangedBitmap = statusChangedBitmap;
-		return;
-	}
-	if (USBToHostWord(hubStatus.statusFlags) & (kHubLocalPowerStatus | kHubOverCurrentIndicator))
-		statusChangedBitmap |= statusBit;
-	statusBit <<= 1;
-	for (uint8_t port = 0U; port < _rootHubNumPorts; ++port, statusBit <<= 1) {
-		if (_rhPortResetPending[port]) {
-			if (CHECK_FOR_MAVERICKS)
-				RootHubStartTimer32(kUSBRootHubPollingRate);
-			continue;
-		}
-		portStatus.statusFlags = 0U;
-		portStatus.changeFlags = 0U;
-		portToCheck = PortNumberCanonicalToProtocol(port, reinterpret_cast<uint8_t*>(&portStatus.statusFlags));
-		if (!portToCheck)
-			continue;
-		if (GetRootHubPortStatus(&portStatus, portToCheck) != kIOReturnSuccess)
-			continue;
-		portStatus.changeFlags = USBToHostWord(portStatus.changeFlags);
-		portStatus.statusFlags = USBToHostWord(portStatus.statusFlags);
-		if ((portStatus.statusFlags & kHubPortConnection) &&
-			!(portStatus.changeFlags & kHubPortConnection) &&
-			_rhPortEmulateCSC[port])
-			portStatus.changeFlags |= kHubPortConnection;
-		if (!(portStatus.changeFlags & kHubPortSuperSpeedStateChangeMask))
-			continue;
-		portStatus.changeFlags |= kHubPortConnection;
-		statusChangedBitmap |= statusBit;
-	}
-#else
 	uint32_t statusChangedBitmap = RHPortStatusChangeBitmapGrab();
 	if (gux_log_level >= 2 && statusChangedBitmap)
 		IOLog("%s: statusChangedBitmap == %#x\n", __FUNCTION__, statusChangedBitmap);
@@ -535,7 +448,7 @@ void CLASS::UIMRootHubStatusChange(void)
 	_rhPortStatusChangeBitmapGated = statusChangedBitmap;
 	if (!_controllerAvailable || _wakingFromHibernation)
 		statusChangedBitmap = 0U;
-#endif
+
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1090 || defined(REHABMAN_UNIVERSAL_BUILD)
 	if (CHECK_FOR_MAVERICKS) {
 		if (_errataBits & kErrataVMwarePortSwap)
@@ -778,12 +691,7 @@ retry:
 		statusFlags |= ((linkState << kSSHubPortStatusLinkStateShift) & kSSHubPortStatusLinkStateMask);
 		if (portSC & XHCI_PS_PP)
 			statusFlags |= kSSHubPortStatusPowerMask;
-#if 0
-		/*
-		 * This is implied, as it is in fact zero
-		 */
-		statusFlags |= ((kSSHubPortSpeed5Gbps << kSSHubPortStatusSpeedShift) & kSSHubPortStatusSpeedMask);
-#endif
+
 		changeFlags = static_cast<uint16_t>(((portSC >> 17) & 0x19U) |	// PRC, OCC, CSC as above
 											((portSC >> 16) & 0xC0U) |	// CEC, PLC as above
 											((portSC >> 14) & kSSHubPortChangeBHResetMask));	// WRC
@@ -791,7 +699,7 @@ retry:
 		/*
 		 * Clear change bit a superspeed port is not allowed to set
 		 */
-			Write32Reg(&_pXHCIOperationalRegisters->prs[_port].PortSC, (portSC & XHCI_PS_WRITEBACK_MASK) | XHCI_PS_PEC);
+        Write32Reg(&_pXHCIOperationalRegisters->prs[_port].PortSC, (portSC & XHCI_PS_WRITEBACK_MASK) | XHCI_PS_PEC);
 	}
 #ifdef DEBOUNCING
 	if (_rhPortBeingWarmReset[_port]) {

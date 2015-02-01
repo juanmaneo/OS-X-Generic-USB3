@@ -8,8 +8,7 @@
 
 #include "GenericUSBXHCI.h"
 
-#define CLASS GenericUSBXHCI
-#define super IOUSBControllerV3
+#include "Config.h"
 
 #pragma mark -
 #pragma mark Power Management
@@ -40,12 +39,8 @@ void CLASS::CheckSleepCapability(void)
 	 *   if xHC does not support save/restore.
 	 * See IOUSBRootHubDevice::start
 	 */
-#if 0
-	setProperty("Card Type", haveSleep ? "Built-in" : "PCI");
-#else
 	setProperty("Card Type", "Built-in");
 	setProperty("ResetOnResume", !haveSleep);
-#endif
 }
 
 __attribute__((visibility("hidden")))
@@ -192,64 +187,10 @@ void CLASS::NotifyRootHubsOfPowerLoss(void)
 	pm2 = GetHubForProtocol(kUSBDeviceSpeedHigh);
 	pm3 = GetHubForProtocol(kUSBDeviceSpeedSuper);
 	if (pm2)
-#if 1
 		pm2->changePowerStateTo(kIOUSBHubPowerStateRestart);
-#else
-		pm2->HubPowerChange(kIOUSBHubPowerStateRestart);
-#endif
 	if (pm3)
-#if 1
 		pm3->changePowerStateTo(kIOUSBHubPowerStateRestart);
-#else
-		pm3->HubPowerChange(kIOUSBHubPowerStateRestart);
-#endif
 }
-
-#if 0
-__attribute__((visibility("hidden")))
-void CLASS::SantizePortsAfterPowerLoss(void)
-{
-	for (uint8_t port = 0U; port < _rootHubNumPorts; ++port) {
-		uint32_t portSC = GetPortSCForWriting(port);
-		if (m_invalid_regspace)
-			return;
-		Write32Reg(&_pXHCIOperationalRegisters->prs[port].PortSC, portSC | XHCI_PS_WAKEBITS);
-	}
-}
-
-__attribute__((visibility("hidden")))
-void CLASS::DisableWakeBits(void)
-{
-	if (!_wakeEnabled || m_invalid_regspace || isInactive())
-		return;
-	for (uint8_t port = 0U; port < _rootHubNumPorts; ++port) {
-		uint32_t portSC = GetPortSCForWriting(port);
-		if (m_invalid_regspace)
-			return;
-		Write32Reg(&_pXHCIOperationalRegisters->prs[port].PortSC, portSC & ~XHCI_PS_WAKEBITS);
-	}
-	_wakeEnabled = false;
-}
-
-__attribute__((visibility("hidden")))
-void CLASS::EnableWakeBits(void)
-{
-	if (_wakeEnabled || m_invalid_regspace || isInactive())
-		return;
-	uint32_t idbmp = _expansionData->_ignoreDisconnectBitmap;
-	for (uint8_t port = 0U; port < _rootHubNumPorts; ++port) {
-		uint32_t portSC = GetPortSCForWriting(port);
-		if (m_invalid_regspace)
-			return;
-		if (idbmp & (2U << port))
-			portSC = (portSC & ~XHCI_PS_WAKEBITS) | XHCI_PS_WOE;
-		else
-			portSC |= XHCI_PS_WAKEBITS;
-		Write32Reg(&_pXHCIOperationalRegisters->prs[port].PortSC, portSC);
-	}
-	_wakeEnabled = true;
-}
-#endif
 
 __attribute__((visibility("hidden")))
 void CLASS::SetPropsForBookkeeping(void)
@@ -269,13 +210,8 @@ void CLASS::SetPropsForBookkeeping(void)
 	 *   Additionally, iPhone/iPad ask for 1600mA of extra power on high-speed
 	 *   ports, so we allow for that as well.
 	 */
-#if 0
-	uint32_t defaultTotalExtraCurrent = (kUSB3MaxPowerPerPort - kUSB2MaxPowerPerPort) * _rootHubNumPorts;
-	uint32_t defaultMaxCurrentPerPort = kUSB3MaxPowerPerPort;
-#else
 	uint32_t defaultTotalExtraCurrent = (kUSB3MaxPowerPerPort - kUSB2MaxPowerPerPort) * 255U;
 	uint32_t defaultMaxCurrentPerPort = kUSB3MaxPowerPerPort + 1600U;
-#endif
 	/*
 	 * Note: Only set defaults if none were injected via DSDT
 	 */
